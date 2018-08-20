@@ -1,0 +1,19 @@
+Metadata-Version: 2.1
+Name: sigpy
+Version: 0.1
+Summary: Signomial optimiziation via SAGE.
+Home-page: https://github.com/rileyjmurray/sigpy
+Author: Riley John Murray
+Author-email: rmurray@caltech.edu
+License: UNKNOWN
+Description: # Sigpy is for signomial optimization
+        It implements the SAGE hierarchy.
+Platform: UNKNOWN
+Classifier: Programming Language :: Python
+Classifier: Natural Language :: English
+Classifier: License :: Apache Software License
+Classifier: Development Status :: 3 - Alpha
+Classifier: Operating System :: OS Independent
+Classifier: Intended Audience :: Science/Research
+Classifier: Topic :: Scientific/Engineering :: Mathematics
+Description-Content-Type: text/markdown

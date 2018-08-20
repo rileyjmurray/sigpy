@@ -1,5 +1,6 @@
 import numpy as np
-from signomials import Signomial
+
+from sigpy.signomials import Signomial
 
 
 def test_construction():

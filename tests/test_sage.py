@@ -14,8 +14,9 @@
    limitations under the License.
 """
 import numpy as np
-import sage
 from signomials import Signomial
+
+from sigpy import sage
 
 
 def primal_dual_vals(f, level):
