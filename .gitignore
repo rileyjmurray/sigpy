@@ -7,3 +7,4 @@
 .pytest_cache
 dist/*
 build/*
+sigpy.egg-info/*
