@@ -3,23 +3,22 @@ import unittest
 from sigpy.signomials import Signomial
 
 
-def test_construction():
-    # data for tests
-    alpha = np.array([[0], [1], [2]])
-    c = np.array([1, -1, -2])
-    alpha_c = {(0,): 1, (1,): -1, (2,): -2}
-    # Construction with two numpy arrays as arguments
-    s = Signomial(alpha, c)
-    assert s.n == 1 and s.m == 3 and s.alpha_c == alpha_c
-    # Construction with a vector-to-coefficient dictionary
-    s = Signomial(alpha_c)
-    recovered_alpha_c = dict()
-    for i in range(s.m):
-        recovered_alpha_c[tuple(s.alpha[i, :])] = s.c[i]
-    assert s.n == 1 and s.m == 3 and alpha_c == recovered_alpha_c
-
-
 class TestSignomials(unittest.TestCase):
+
+    def test_construction(self):
+        # data for tests
+        alpha = np.array([[0], [1], [2]])
+        c = np.array([1, -1, -2])
+        alpha_c = {(0,): 1, (1,): -1, (2,): -2}
+        # Construction with two numpy arrays as arguments
+        s = Signomial(alpha, c)
+        assert s.n == 1 and s.m == 3 and s.alpha_c == alpha_c
+        # Construction with a vector-to-coefficient dictionary
+        s = Signomial(alpha_c)
+        recovered_alpha_c = dict()
+        for i in range(s.m):
+            recovered_alpha_c[tuple(s.alpha[i, :])] = s.c[i]
+        assert s.n == 1 and s.m == 3 and alpha_c == recovered_alpha_c
 
     # noinspection PyUnresolvedReferences
     def test_scalar_multiplication(self):

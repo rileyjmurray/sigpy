@@ -16,7 +16,21 @@
 
 import numpy as np
 
-import signomials
+from sigpy.signomials import Signomial
+
+
+def get_vars_by_name(prob):
+    """
+    A helper function for retrieving the values of variables in a given CVXPY Problem.
+
+    :param prob: a CVXPY Problem.
+    :return: a dictionary from the variable's name (in the CVXPY Problem) to it's current value.
+    """
+    variables = prob.variables()
+    named_vars = dict()
+    for var in variables:
+        named_vars[var.name()] = var.value
+    return named_vars
 
 
 def sig_for_copositivity_test(a_array):
@@ -34,7 +48,7 @@ def sig_for_copositivity_test(a_array):
                     alpha_c[tuple(vec.tolist())] += a_array[j, i]
             else:
                 continue
-    return signomials.Signomial(alpha_c)
+    return Signomial(alpha_c)
 
 
 def sig_for_psd_test(a_array):
@@ -57,6 +71,5 @@ def sig_for_psd_test(a_array):
 def hyperbolic_sine_transform(n, i, scale=1):
     vec = np.zeros(n)
     vec[i] = 1
-    s = signomials.Signomial({tuple(vec.tolist()): scale, tuple((-vec).tolist()): -scale})
+    s = Signomial({tuple(vec.tolist()): scale, tuple((-vec).tolist()): -scale})
     return s
-
