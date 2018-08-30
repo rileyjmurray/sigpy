@@ -15,13 +15,13 @@
 """
 import unittest
 import numpy as np
-from sigpy import sigprog_relaxations
+from sigpy import relaxations
 from sigpy.signomials import Signomial
 
 
 def primal_dual_vals(f, level):
-    p = sigprog_relaxations.sage_primal(f, level).solve(solver='ECOS')
-    d = sigprog_relaxations.sage_dual(f, level).solve(solver='ECOS')
+    p = relaxations.sage_primal(f, level).solve(solver='ECOS')
+    d = relaxations.sage_dual(f, level).solve(solver='ECOS')
     return [p, d]
 
 
@@ -110,20 +110,20 @@ class TestSAGERelaxations(unittest.TestCase):
         s = Signomial({(-1,): 1, (1,): -1})
         s = s ** 2
         s.remove_terms_with_zero_as_coefficient()
-        status = sigprog_relaxations.sage_feasibility(s).solve(solver='ECOS')
+        status = relaxations.sage_feasibility(s).solve(solver='ECOS')
         assert status == 0
         s = s ** 2
-        status = sigprog_relaxations.sage_feasibility(s).solve(solver='ECOS')
+        status = relaxations.sage_feasibility(s).solve(solver='ECOS')
         assert status == -np.inf
 
     def test_sage_multiplier_search(self):
         s = Signomial({(1,): 1, (-1,): -1}) ** 4
         s.remove_terms_with_zero_as_coefficient()
-        val0 = sigprog_relaxations.sage_multiplier_search(s, level=1).solve(solver='ECOS')
+        val0 = relaxations.sage_multiplier_search(s, level=1).solve(solver='ECOS')
         assert val0 == -np.inf
-        s_star = sigprog_relaxations.sage_primal(s, level=1).solve(solver='ECOS')
+        s_star = relaxations.sage_primal(s, level=1).solve(solver='ECOS')
         s = s - 0.5 * s_star
-        val1 = sigprog_relaxations.sage_multiplier_search(s, level=1).solve(solver='ECOS')
+        val1 = relaxations.sage_multiplier_search(s, level=1).solve(solver='ECOS')
         assert val1 == 0
 
     def test_constrained_sage(self):
@@ -139,8 +139,8 @@ class TestSAGERelaxations(unittest.TestCase):
                        (0, 0, 0): 1})
         gs = [g]
         expected = -0.6147
-        actual = [sigprog_relaxations.constrained_sage_primal(f, gs, p=0, q=1).solve(solver='ECOS'),
-                  sigprog_relaxations.constrained_sage_dual(f, gs, p=0, q=1).solve(solver='ECOS')]
+        actual = [relaxations.constrained_sage_primal(f, gs, p=0, q=1).solve(solver='ECOS'),
+                  relaxations.constrained_sage_dual(f, gs, p=0, q=1).solve(solver='ECOS')]
         assert abs(actual[0] - expected) < 1e-4 and abs(actual[1] - expected) < 1e-4
 
 

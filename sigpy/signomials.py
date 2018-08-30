@@ -241,3 +241,106 @@ class Signomial(object):
             return len(negs[0]) - 1
         else:
             return len(negs[0])
+
+
+class Polynomial(Signomial):
+
+    def __init__(self, alpha_maybe_c, c=None, verify=True):
+        Signomial.__init__(alpha_maybe_c, c)
+        # verify that self.alpha is an array of nonnegative integers
+        if verify:
+            if np.any(self.alpha < 0):
+                raise RuntimeError('Polynomials cannot have negative exponents.')
+            if np.linalg.norm(np.round(self.alpha,0) - self.alpha) > 0.0:
+                raise RuntimeError('Polynomial exponents must be integers.')
+
+    def even_monomial_locations(self):
+        return [i for (i,row) in enumerate(self.alpha) if np.all(row % 2 == 0)]
+
+    def is_single_orthant_dominated(self):
+        even_mon_locs = self.even_monomial_locations()
+        if len(even_mon_locs) >= self.m-1:
+            return True
+        else:
+            # Solve the appropriate linear system over F_2^n.
+            # ... for now, just return false.
+            return False
+
+    def __add__(self, other):
+        if not isinstance(other, Polynomial):
+            tup = (0,) * self.n
+            d = {tup: other}
+            other = Polynomial(d, verify=False)
+        d = defaultdict(lambda: 0, self.alpha_c)
+        for k, v in other.alpha_c.items():
+            d[k] += v
+        return Polynomial(d, verify=False)
+
+    def __radd__(self, other):
+        return self.__add__(other)
+
+    def __mul__(self, other):
+        if not isinstance(other, Polynomial):
+            tup = (0,) * self.n
+            d = {tup: other}
+            other = Polynomial(d, verify=False)
+        d = defaultdict(lambda: 0)
+        alpha1, c1 = self.alpha_c_arrays()
+        alpha2, c2 = other.alpha_c_arrays()
+        for i1, v1 in enumerate(alpha1):
+            for i2, v2 in enumerate(alpha2):
+                d[tuple(v1 + v2)] += c1[i1] * c2[i2]
+        return Polynomial(d, verify=False)
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
+    def __sub__(self, other):
+        # noinspection PyTypeChecker
+        return self.__add__(-1 * other)
+
+    def __rsub__(self, other):
+        # noinspection PyTypeChecker
+        return other + (-1) * self
+
+    def __pow__(self, power, modulo=None):
+        if not isinstance(power, int) or power < 0:
+            raise ValueError('Polynomials may only be raised to nonnegative powers.')
+        s = Polynomial(self.alpha_c, verify=False)
+        for t in range(power-1):
+            s = s * self
+            s._update_alpha_c_arrays()
+        if power == 0:
+            # noinspection PyTypeChecker
+            return Polynomial({(0,) * s.n: 1}, verify=False)
+        elif power == 1:
+            return s
+        else:
+            return Polynomial(s.alpha_c, verify=False)
+
+    def __neg__(self):
+        # noinspection PyTypeChecker
+        return self.__mul__(-1)
+
+    def __call__(self, x):
+        """
+        Evaluates the mathematical function specified by the current Signomial object.
+
+        :param x: either a scalar (if self.n == 1), or a numpy n-d array with x.size == n.
+        :return:  If x is a scalar or an n-d array of shape (self.n,), then "val" is a numeric
+        type equal to the signomial evaluated at x. If instead x is of shape (self.n, k) for
+        some positive integer k, then "val" is a numpy n-d array of shape (k,), with val[i]
+        equal to the current signomial evaluated on the i^th column of x.
+
+        This function's behavior is undefined when x is not a scalar and has len(x.shape) > 2.
+        """
+        if np.isscalar(x):
+            x = np.array([x])
+        if not x.size == self.n:
+            raise ValueError('The point must be in R^' + str(self.n) +
+                             ', but the provided point is in R^' + str(x.shape[0]))
+        temp = x.flatten() ** self.alpha
+        monomials = np.prod(temp, axis=1)
+        val = np.dot(self.c, monomials)
+        return val
+

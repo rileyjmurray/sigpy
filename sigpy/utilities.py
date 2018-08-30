@@ -19,6 +19,21 @@ import numpy as np
 from sigpy.signomials import Signomial
 
 
+def hierarchy_e_k(sig_list, k):
+    """
+    :param sig_list: a list of Signomial objects over a common domain R^n
+    :param k: a nonnegative integer
+    :return: If "alpha" denotes the union of exponent vectors over Signomials in
+    sig_list, then this function returns "E_k(alpha)" from the original paper
+    on the SAGE hierarchy.
+    """
+    alpha_tups = sum([list(s.alpha_c.keys()) for s in sig_list], [])
+    alpha_tups = set(alpha_tups)
+    s = Signomial(dict([(a, 1.0) for a in alpha_tups]))
+    s = s ** k
+    return s.alpha
+
+
 def get_vars_by_name(prob):
     """
     A helper function for retrieving the values of variables in a given CVXPY Problem.

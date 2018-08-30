@@ -15,12 +15,13 @@
 """
 import cvxpy
 import numpy as np
+from sigpy.signomials import Signomial
 
 
 __NUMERIC_TYPES__ = (int, float, np.int_, np.float_)
 
 
-def relative_c_sage_star(s, v):
+def dual_variable_to_sage_signomial(s, v):
     """
     Given the Signomial s and a CVXPY variable "v", return a list of CVXPY Constraint objects such
     that v is a conic dual variable to the constraint "s.c \in C_{SAGE}(s.alpha)".
@@ -56,7 +57,7 @@ def relative_c_sage_star(s, v):
     return constraints
 
 
-def relative_c_sage(s):
+def signomial_is_sage(s):
     """
     Given a signomial "s", return a list of CVXPY Constraint objects over CVXPY Variables c_vars and nu_vars
     such that s is SAGE iff c_vars and nu_vars satisfy every constraint in this list.
@@ -73,7 +74,7 @@ def relative_c_sage(s):
     nu_vars = dict()
     constraints = []
     for i in N_I:
-        c_i, nu_i, constrs_i = relative_c_age(s, i)
+        c_i, nu_i, constrs_i = age_cone(s, i)
         c_vars[i] = c_i
         nu_vars[i] = nu_i
         constraints += constrs_i
@@ -84,7 +85,7 @@ def relative_c_sage(s):
     return constraints
 
 
-def relative_c_age(s, i):
+def age_cone(s, i):
     constraints = list()
     idx_set = np.arange(s.m) != i
     # variable definitions
@@ -101,3 +102,29 @@ def relative_c_age(s, i):
     rel_ent = kl_expr1 + kl_expr2
     constraints.append(cvxpy.sum(rel_ent) - c_var[i] <= 0)  # relative entropy constraint
     return c_var, nu_var, constraints
+
+
+def polynomial_is_sage(p):
+    """
+
+    :param p: a Polynomial object
+    :return: a list of constraints over
+    """
+    sig_rep = signomial_representative(p)
+    need_constrs = [i for i in range(p.m) if not isinstance(sig_rep.c[i], __NUMERIC_TYPES__)]
+    constrs = [sig_rep.c[i] <= cvxpy.abs(p.c[i]) for i in need_constrs] + signomial_is_sage(sig_rep)
+    return constrs
+
+
+def signomial_representative(p):
+    sig_rep = Signomial(p.alpha_c)
+    even_locs = p.even_monomial_locations()
+    for i in range(p.m):
+        if i not in even_locs:
+            if isinstance(p.c[i], __NUMERIC_TYPES__):
+                sig_rep.c[i] = -abs(p.c[i])
+            else:
+                sig_rep.c[i] = cvxpy.Variable()
+    return sig_rep
+
+

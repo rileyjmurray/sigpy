@@ -16,8 +16,8 @@
 import cvxpy
 import numpy as np
 from itertools import combinations_with_replacement
-from sigpy.signomials import Signomial, relative_coeff_vector
-from sigpy.sage_cones import relative_c_sage_star, relative_c_sage
+from sigpy.signomials import Signomial, Polynomial, relative_coeff_vector
+from sigpy.constraint_defs import dual_variable_to_sage_signomial, signomial_is_sage, signomial_representative
 
 __NUMERIC_TYPES__ = (int, float, np.int_, np.float_)
 
@@ -54,6 +54,8 @@ def sage_dual(s, level=0):
             for
                 I = { i | a[i] != 0 }.
     """
+    if isinstance(s, Polynomial):
+        s, _ = signomial_representative(s)
     # Signomial definitions (for the objective).
     s_mod = Signomial(s.alpha_c)
     t_mul = Signomial(s.alpha, np.ones(s.m)) ** level
@@ -61,7 +63,7 @@ def sage_dual(s, level=0):
     s_mod = s_mod * t_mul
     # C_SAGE^STAR (v must belong to the set defined by these constraints).
     v = cvxpy.Variable(shape=(lagrangian.m, 1), name='v')
-    constraints = relative_c_sage_star(lagrangian, v)
+    constraints = dual_variable_to_sage_signomial(lagrangian, v)
     # Equality constraint (for the Lagrangian to be bounded).
     a = relative_coeff_vector(t_mul, lagrangian.alpha)
     a = a.reshape(a.size, 1)
@@ -98,6 +100,8 @@ def sage_primal(s, level=0, special_multiplier=None):
     This makes it very simple to represent "s_mod.c \in C_{SAGE}(s_mod.alpha)" via CVXPY Constraints. The work defining
     the necessary CVXPY variables and constructing the CVXPY constraints is handled by the function "c_sage."
     """
+    if isinstance(s, Polynomial):
+        s, _ = signomial_representative(s)
     if special_multiplier is None:
         t = Signomial(s.alpha, np.ones(s.m))
     else:
@@ -112,7 +116,7 @@ def sage_primal(s, level=0, special_multiplier=None):
     gamma = cvxpy.Variable(name='gamma')
     s_mod = (s - gamma) * (t ** level)
     s_mod.remove_terms_with_zero_as_coefficient()
-    constraints = relative_c_sage(s_mod)
+    constraints = signomial_is_sage(s_mod)
     obj = cvxpy.Maximize(gamma)
     prob = cvxpy.Problem(obj, constraints)
     # Add fields that we can access later.
@@ -127,7 +131,9 @@ def sage_feasibility(s):
     :param s: a Signomial object
     :return: a CVXPY Problem which is feasible iff s.c \in C_{SAGE}(s.alpha)
     """
-    constraints = relative_c_sage(s)
+    if isinstance(s, Polynomial):
+        s, _ = signomial_representative(s)
+    constraints = signomial_is_sage(s)
     # noinspection PyTypeChecker
     obj = cvxpy.Maximize(0)
     prob = cvxpy.Problem(obj, constraints)
@@ -149,15 +155,17 @@ def sage_multiplier_search(s, level=1):
     :param level: a nonnegative integer
     :return: a CVXPY Problem that is feasible iff s * mult is SAGE for some SAGE multiplier signomial "mult".
     """
+    if isinstance(s, Polynomial):
+        s, _ = signomial_representative(s)
     s.remove_terms_with_zero_as_coefficient()
     constraints = []
     mult_alpha = hierarchy_e_k([s], k=level)
     c_tilde = cvxpy.Variable(mult_alpha.shape[0], name='c_tilde')
     mult = Signomial(mult_alpha, c_tilde)
-    constraints += relative_c_sage(mult)
+    constraints += signomial_is_sage(mult)
     constraints.append(cvxpy.sum(c_tilde) >= 1)
     sig_under_test = mult * s
-    sage_membership_constraints = relative_c_sage(sig_under_test)
+    sage_membership_constraints = signomial_is_sage(sig_under_test)
     constraints += sage_membership_constraints
     # noinspection PyTypeChecker
     obj = cvxpy.Maximize(0)
@@ -178,8 +186,8 @@ def constrained_sage_primal(f, gs, p=0, q=1):
     :return: a CVXPY Problem that defines the primal formulation for f_{SAGE}^{(p, q)}.
     """
     lagrangian, dualized_signomials = make_lagrangian(f, gs, p=p, q=q)
-    constrs = sum([relative_c_sage(s_h) for s_h, _ in dualized_signomials], [])
-    constrs += relative_c_sage(lagrangian)
+    constrs = sum([signomial_is_sage(s_h) for s_h, _ in dualized_signomials], [])
+    constrs += signomial_is_sage(lagrangian)
     for v in lagrangian.constant_term().variables():
         if v.name() == 'gamma':
             gamma = v
@@ -204,10 +212,10 @@ def constrained_sage_dual(f, gs, p=0, q=1):
     """
     lagrangian, dualized_signomials = make_lagrangian(f, gs, p=p, q=q)
     v = cvxpy.Variable(shape=(lagrangian.m, 1))
-    constraints = relative_c_sage_star(lagrangian, v)
+    constraints = dual_variable_to_sage_signomial(lagrangian, v)
     for s_h, h in dualized_signomials:
         v_h = cvxpy.Variable(name='v_h_' + str(s_h), shape=(s_h.m, 1))
-        constraints += relative_c_sage_star(s_h, v_h)
+        constraints += dual_variable_to_sage_signomial(s_h, v_h)
         c_h = hierarchy_c_h_array(s_h, h, lagrangian)
         constraints.append(c_h * v == v_h)
     # Equality constraint (for the Lagrangian to be bounded).
@@ -225,7 +233,7 @@ def make_lagrangian(f, gs, p, q, add_constant_sig=True):
     Given a problem \inf{ f(x) : g(x) >= 0 for g in gs}, construct the q-fold constraints H,
     and the lagrangian
         L = f - \gamma - \sum_{h \in H} s_h * h
-    where \gamma and the coefficients on Signomials s_h are CVXPY Variables.
+    where \gamma and the coefficients of Signomials s_h are CVXPY Variables.
 
     :param f: a Signomial (or a constant numeric type).
     :param gs: a nonempty list of Signomials.
@@ -256,20 +264,6 @@ def make_lagrangian(f, gs, p, q, add_constant_sig=True):
         lagrangian -= temp_sh * h
         dualized_signomials.append((temp_sh, h))
     return lagrangian, dualized_signomials
-
-
-def get_vars_by_name(prob):
-    """
-    A helper function for retrieving the values of variables in a given CVXPY Problem.
-
-    :param prob: a CVXPY Problem.
-    :return: a dictionary from the variable's name (in the CVXPY Problem) to it's current value.
-    """
-    variables = prob.variables()
-    named_vars = dict()
-    for var in variables:
-        named_vars[var.name()] = var.value
-    return named_vars
 
 
 def hierarchy_c_h_array(s_h, h, lagrangian):
