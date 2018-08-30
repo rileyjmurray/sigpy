@@ -16,7 +16,7 @@
 import cvxpy
 import numpy as np
 from itertools import combinations_with_replacement
-from signomials import Signomial, relative_coeff_vector
+from sigpy.signomials import Signomial, relative_coeff_vector
 
 
 __NUMERIC_TYPES__ = (int, float, np.int_, np.float_)
@@ -191,15 +191,14 @@ def relative_c_age(s, i):
     idx_set = np.arange(s.m) != i
     # variable definitions
     c_var = cvxpy.Variable(shape=(s.m, 1), name='c^{(' + str(i) + '})_' + str(s))
-    nu_var = cvxpy.Variable(shape=(s.m, 1), name='nu^{(' + str(i) + '})_' + str(s))
+    nu_var = cvxpy.Variable(shape=(s.m-1, 1), name='nu^{(' + str(i) + '})_' + str(s), nonneg=True)
     # variable non-negativity constraints
     constraints.append(c_var[idx_set] >= 0)
-    constraints.append(nu_var[idx_set] >= 0)
     # main constraints
-    constraints.append(s.alpha.T * nu_var == np.zeros(shape=(s.n, 1)))  # convex cover constraint 1
-    constraints.append(cvxpy.sum(nu_var) == 0)  # convex cover constraint 2
-    kl_expr1 = cvxpy.kl_div(nu_var[idx_set], np.exp(1) * c_var[idx_set])
-    kl_expr2 = nu_var[idx_set] - np.exp(1) * c_var[idx_set]
+    constraints.append(
+        (s.alpha[idx_set,:] - s.alpha[i,:]).T * nu_var == np.zeros(shape=(s.n, 1)))  # convex cover constraint
+    kl_expr1 = cvxpy.kl_div(nu_var, np.exp(1) * c_var[idx_set])
+    kl_expr2 = nu_var - np.exp(1) * c_var[idx_set]
     rel_ent = kl_expr1 + kl_expr2
     constraints.append(cvxpy.sum(rel_ent) - c_var[i] <= 0)  # relative entropy constraint
     return c_var, nu_var, constraints
