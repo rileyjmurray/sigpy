@@ -15,13 +15,13 @@
 """
 import unittest
 import numpy as np
-from sigpy import relaxations
+from sigpy import sage
 from sigpy.signomials import Signomial
 
 
 def primal_dual_vals(f, level):
-    p = relaxations.sage_primal(f, level).solve(solver='ECOS')
-    d = relaxations.sage_dual(f, level).solve(solver='ECOS')
+    p = sage.sage_primal(f, level).solve(solver='ECOS')
+    d = sage.sage_dual(f, level).solve(solver='ECOS')
     return [p, d]
 
 
@@ -110,20 +110,20 @@ class TestSAGERelaxations(unittest.TestCase):
         s = Signomial({(-1,): 1, (1,): -1})
         s = s ** 2
         s.remove_terms_with_zero_as_coefficient()
-        status = relaxations.sage_feasibility(s).solve(solver='ECOS')
+        status = sage.sage_feasibility(s).solve(solver='ECOS')
         assert status == 0
         s = s ** 2
-        status = relaxations.sage_feasibility(s).solve(solver='ECOS')
+        status = sage.sage_feasibility(s).solve(solver='ECOS')
         assert status == -np.inf
 
     def test_sage_multiplier_search(self):
         s = Signomial({(1,): 1, (-1,): -1}) ** 4
         s.remove_terms_with_zero_as_coefficient()
-        val0 = relaxations.sage_multiplier_search(s, level=1).solve(solver='ECOS')
+        val0 = sage.sage_multiplier_search(s, level=1).solve(solver='ECOS')
         assert val0 == -np.inf
-        s_star = relaxations.sage_primal(s, level=1).solve(solver='ECOS')
+        s_star = sage.sage_primal(s, level=1).solve(solver='ECOS')
         s = s - 0.5 * s_star
-        val1 = relaxations.sage_multiplier_search(s, level=1).solve(solver='ECOS')
+        val1 = sage.sage_multiplier_search(s, level=1).solve(solver='ECOS')
         assert val1 == 0
 
     def test_constrained_sage(self):
@@ -139,8 +139,8 @@ class TestSAGERelaxations(unittest.TestCase):
                        (0, 0, 0): 1})
         gs = [g]
         expected = -0.6147
-        actual = [relaxations.constrained_sage_primal(f, gs, p=0, q=1).solve(solver='ECOS'),
-                  relaxations.constrained_sage_dual(f, gs, p=0, q=1).solve(solver='ECOS')]
+        actual = [sage.constrained_sage_primal(f, gs, p=0, q=1).solve(solver='ECOS'),
+                  sage.constrained_sage_dual(f, gs, p=0, q=1).solve(solver='ECOS')]
         assert abs(actual[0] - expected) < 1e-4 and abs(actual[1] - expected) < 1e-4
 
 
