@@ -212,8 +212,8 @@ class Signomial(object):
 
         This function's behavior is undefined when x is not a scalar and has len(x.shape) > 2.
         """
-        if np.isscalar(x):
-            x = np.array([x])
+        if np.isscalar(x) or (isinstance(x, np.ndarray) and x.size == 1):
+            x = np.array([np.asscalar(np.array(x))])  # coerce into a 1d array of shape (1,).
         if not x.shape[0] == self.n:
             raise ValueError('The point must be in R^' + str(self.n) +
                              ', but the provided point is in R^' + str(x.shape[0]))
