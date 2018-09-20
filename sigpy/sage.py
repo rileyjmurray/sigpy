@@ -65,13 +65,13 @@ def sage_dual(s, level=0):
     # Equality constraint (for the Lagrangian to be bounded).
     a = relative_coeff_vector(t_mul, lagrangian.alpha)
     a = a.reshape(a.size, 1)
-    constraints.append(a.T * v == 1)
+    constraints.append(cl.dot(a.T, v) == 1)
     # Objective definition and problem creation.
     obj_vec = relative_coeff_vector(s_mod, lagrangian.alpha)
     obj = cl.dot(obj_vec, v)
     # Gather main variables
     variables = [v]
-    return [obj, constraints, variables]
+    return obj, constraints, variables
 
 
 def relative_c_sage_star(s, v):
@@ -93,7 +93,7 @@ def relative_c_sage_star(s, v):
     N_I = [i for i, c_i in enumerate(c) if (i in non_constants) or c_i < 0]
     Nc_I = [i for i, c_i in enumerate(c) if (i in non_constants) or c_i > 0]
     # variable definitions
-    mu = cl.Variable(shape=(len(N_I), s.n), name=('mu_' + str(v.id)))
+    mu = cl.Variable(shape=(len(N_I), s.n), name=('mu_' + str(v.name)))
     # constraints
     constraints = []
     for i, ii in enumerate(N_I):
@@ -133,7 +133,7 @@ def sage_primal(s, level=0):
     s_mod.remove_terms_with_zero_as_coefficient()
     constraints, variables = relative_c_sage(s_mod)
     obj = [-gamma.asexpr()]
-    return [obj, constraints, variables]
+    return obj, constraints, variables
 
 
 def relative_c_sage(s):
@@ -280,7 +280,7 @@ def constrained_sage_dual(f, gs, p=0, q=1):
     # Equality constraint (for the Lagrangian to be bounded).
     a = relative_coeff_vector(Signomial({(0,) * f.n: 1}), lagrangian.alpha)
     a = a.reshape(a.size, 1)
-    constraints.append(cl.dot(a, v) == 1)
+    constraints.append(cl.dot(a.T, v) == 1)
     obj_vec = relative_coeff_vector(f, lagrangian.alpha)
     obj = [cl.dot(obj_vec, v)]
     return obj, constraints, variables
