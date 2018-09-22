@@ -17,12 +17,40 @@ import unittest
 import numpy as np
 from sigpy import sage
 from sigpy.signomials import Signomial
+import coniclifts as cl
+import ecos
+
+
+def ecos_minimize(obj, constrs):
+    c, A, b, K, var_name_to_locs = cl.compile_problem(obj, constrs)
+    G, h, cones, A_ecos, b_ecos = cl.ecos_format(A, b, K)
+    sol = ecos.solve(c, G, h, cones, A_ecos, b_ecos, verbose=True)
+    if sol['info']['infostring'] == 'Primal infeasible':
+        return np.inf
+    elif sol['info']['infostring'] == 'Dual infeasible':
+        return -np.inf
+    else:
+        return sol['info']['pcost']
 
 
 def primal_dual_vals(f, level):
-    p = sage.sage_primal(f, level).solve(solver='ECOS')
-    d = sage.sage_dual(f, level).solve(solver='ECOS')
+    # primal
+    obj, constrs, variables = sage.sage_primal(f, level=level)
+    p = -ecos_minimize(obj, constrs)
+    # dual
+    obj, constrs, variables = sage.sage_dual(f, level=level)
+    d = ecos_minimize(obj, constrs)
     return [p, d]
+
+
+def constrained_primal_dual_vals(f, gs, p, q):
+    # primal
+    obj, constrs, variables = sage.constrained_sage_primal(f, gs, p, q)
+    prim = -ecos_minimize(obj, constrs)
+    # dual
+    obj, constrs, variables = sage.constrained_sage_dual(f, gs, p, q)
+    dual = ecos_minimize(obj, constrs)
+    return [prim, dual]
 
 
 class TestSAGERelaxations(unittest.TestCase):
@@ -106,16 +134,7 @@ class TestSAGERelaxations(unittest.TestCase):
         pd1 = primal_dual_vals(s, 1)
         assert abs(pd1[0] - expected[1]) < 1e-6 and abs(pd1[1] - expected[1]) < 1e-6
 
-    def test_sage_feasibility(self):
-        s = Signomial({(-1,): 1, (1,): -1})
-        s = s ** 2
-        s.remove_terms_with_zero_as_coefficient()
-        status = sage.sage_feasibility(s).solve(solver='ECOS')
-        assert status == 0
-        s = s ** 2
-        status = sage.sage_feasibility(s).solve(solver='ECOS')
-        assert status == -np.inf
-
+    """
     def test_sage_multiplier_search(self):
         s = Signomial({(1,): 1, (-1,): -1}) ** 4
         s.remove_terms_with_zero_as_coefficient()
@@ -125,6 +144,7 @@ class TestSAGERelaxations(unittest.TestCase):
         s = s - 0.5 * s_star
         val1 = sage.sage_multiplier_search(s, level=1).solve(solver='ECOS')
         assert val1 == 0
+    """
 
     def test_constrained_sage(self):
         s0 = Signomial({(10.2, 0, 0): 10, (0, 9.8, 0): 10, (0, 0, 8.2): 10})
@@ -139,8 +159,7 @@ class TestSAGERelaxations(unittest.TestCase):
                        (0, 0, 0): 1})
         gs = [g]
         expected = -0.6147
-        actual = [sage.constrained_sage_primal(f, gs, p=0, q=1).solve(solver='ECOS'),
-                  sage.constrained_sage_dual(f, gs, p=0, q=1).solve(solver='ECOS')]
+        actual = constrained_primal_dual_vals(f, gs, p=0, q=1)
         assert abs(actual[0] - expected) < 1e-4 and abs(actual[1] - expected) < 1e-4
 
 

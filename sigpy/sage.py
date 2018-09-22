@@ -132,7 +132,7 @@ def sage_primal(s, level=0):
     s_mod = (s - gamma) * (t ** level)
     s_mod.remove_terms_with_zero_as_coefficient()
     constraints, variables = relative_c_sage(s_mod)
-    obj = [-gamma.asexpr()]
+    obj = -gamma.asexpr()
     return obj, constraints, variables
 
 
@@ -147,7 +147,7 @@ def relative_c_sage(s):
 
     """
     if s.m <= 2:
-        return [cl.vstack(s.c.tolist()) >= 0]
+        return [cl.vstack(s.c.tolist()) >= 0], []  # no new variables
     alpha, c = s.alpha_c_arrays()
     non_constants = [i for i, c_i in enumerate(c) if not isinstance(c_i, __NUMERIC_TYPES__)]
     N_I = [i for i, c_i in enumerate(c) if (i in non_constants) or (c_i < 0)]
@@ -245,13 +245,12 @@ def constrained_sage_primal(f, gs, p=0, q=1):
     constrs += temp_constrs
     variables += temp_vars
     for v in lagrangian.constant_term().variables():
-        if v.name() == 'gamma':
+        if v.name == 'gamma':
             gamma = v
             break
     # noinspection PyUnboundLocalVariable
-    expr = cl.ScalarExpression({gamma: -1}, 0, verify=False).asexpr()
-    obj = [expr]
-    variables.append(expr.view(cl.Variable))
+    obj = -gamma
+    variables.append(gamma)
     return obj, constrs, variables
 
 
@@ -282,7 +281,7 @@ def constrained_sage_dual(f, gs, p=0, q=1):
     a = a.reshape(a.size, 1)
     constraints.append(cl.dot(a.T, v) == 1)
     obj_vec = relative_coeff_vector(f, lagrangian.alpha)
-    obj = [cl.dot(obj_vec, v)]
+    obj = cl.dot(obj_vec, v)
     return obj, constraints, variables
 
 
