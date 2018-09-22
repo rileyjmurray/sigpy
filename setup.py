@@ -22,7 +22,7 @@ setuptools.setup(
         'Intended Audience :: Science/Research',
         'Topic :: Scientific/Engineering :: Mathematics'
     ],
-    install_requires=["coniclifts >= 0.0",
+    install_requires=["coniclifts >= 0.1",
                       "ecos >= 2",
                       "numpy >= 1.14"
     ]
