@@ -69,6 +69,9 @@ class Polynomial(Signomial):
         temp = Polynomial(temp.alpha, temp.c)
         return temp
 
+    def __call__(self, *args, **kwargs):
+        raise NotImplementedError('')
+
     @property
     def sig_rep(self):
         if self._sig_rep is None:
