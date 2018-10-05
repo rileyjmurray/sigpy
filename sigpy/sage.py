@@ -22,10 +22,13 @@ from sigpy.signomials import Signomial, relative_coeff_vector
 __NUMERIC_TYPES__ = (int, float, np.int_, np.float_)
 
 
-def sage_dual(s, level=0):
+def sage_dual(s, level=0, additional_cons=None):
     """
     :param s: a Signomial object.
     :param level: a nonnegative integer
+    :param additional_cons: a list of CVXPY Constraint objects over the variables in s.c
+    (unless you are working with SAGE polynomials, there likely won't be any of these).
+
     :return: a CVXPY Problem object representing the dual formulation for s_{SAGE}^{(level)}
 
     In the discussion that follows, let s satisfy s.alpha[0,:] == np.zeros((1,n)).
@@ -69,6 +72,8 @@ def sage_dual(s, level=0):
     # Objective definition and problem creation.
     obj_vec = relative_coeff_vector(s_mod, lagrangian.alpha)
     obj = cvxpy.Minimize(obj_vec * v)
+    if additional_cons is not None:
+        constraints += additional_cons
     prob = cvxpy.Problem(obj, constraints)
     # Add fields that we can access later.
     prob.s_mod = s_mod
@@ -113,12 +118,15 @@ def relative_c_sage_star(s, v):
     return constraints
 
 
-def sage_primal(s, level=0, special_multiplier=None):
+def sage_primal(s, level=0, special_multiplier=None, additional_cons=None):
     """
     :param s: a Signomial object.
     :param level: a nonnegative integer
     :param special_multiplier: an optional parameter, applicable when level > 0. Must be a nonzero
     SAGE function.
+    :param additional_cons: a list of CVXPY Constraint objects over the variables in s.c
+    (unless you are working with SAGE polynomials, there likely won't be any of these).
+
     :return: a CVXPY Problem object representing the primal formulation for s_{SAGE}^{(level)}
 
     Unlike the sage_dual, this formulation can be stated in full generality without too much trouble.
@@ -150,6 +158,8 @@ def sage_primal(s, level=0, special_multiplier=None):
     s_mod.remove_terms_with_zero_as_coefficient()
     constraints = relative_c_sage(s_mod)
     obj = cvxpy.Maximize(gamma)
+    if additional_cons is not None:
+        constraints += additional_cons
     prob = cvxpy.Problem(obj, constraints)
     # Add fields that we can access later.
     prob.s_mod = s_mod
@@ -196,7 +206,7 @@ def relative_c_age(s, i):
     constraints.append(c_var[idx_set] >= 0)
     # main constraints
     constraints.append(
-        (s.alpha[idx_set,:] - s.alpha[i,:]).T * nu_var == np.zeros(shape=(s.n, 1)))  # convex cover constraint
+        (s.alpha[idx_set, :] - s.alpha[i, :]).T * nu_var == np.zeros(shape=(s.n, 1)))  # convex cover constraint
     kl_expr1 = cvxpy.kl_div(nu_var, np.exp(1) * c_var[idx_set])
     kl_expr2 = nu_var - np.exp(1) * c_var[idx_set]
     rel_ent = kl_expr1 + kl_expr2
@@ -204,12 +214,17 @@ def relative_c_age(s, i):
     return c_var, nu_var, constraints
 
 
-def sage_feasibility(s):
+def sage_feasibility(s, additional_cons=None):
     """
     :param s: a Signomial object
+    :param additional_cons: a list of CVXPY Constraint objects over the variables in s.c
+    (unless you are working with SAGE polynomials, there likely won't be any of these).
+
     :return: a CVXPY Problem which is feasible iff s.c \in C_{SAGE}(s.alpha)
     """
     constraints = relative_c_sage(s)
+    if additional_cons is not None:
+        constraints += additional_cons
     # noinspection PyTypeChecker
     obj = cvxpy.Maximize(0)
     prob = cvxpy.Problem(obj, constraints)
