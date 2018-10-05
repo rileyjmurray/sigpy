@@ -25,7 +25,6 @@ def sage_poly_feasibility(p):
     return sage_feasibility(sr, additional_cons=cons)
 
 
-# For constrained polynomial optimization, you need to
-# the the Signomial represenative of the Lagrangian
-# (when appropriately formed). Forming the Lagrangian is
-# a bit of a pain, so we aren't implementing that yet.
+# For constrained polynomial optimization, you need to work with
+# the Signomial represenative of the Lagrangian. Forming the 
+# Lagrangian is a bit of a pain, so we aren't implementing that yet.
