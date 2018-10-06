@@ -2,7 +2,7 @@
 
 For Signomials, it implements the SAGE hierarchy as described by Chandrasekaran and Shah: https://arxiv.org/abs/1409.7640.
 
-For Polynomials, it uses the idea of a "signomial representative" to produce global lower bounds as described in my recent paper: https://arxiv.org/abs/1810.01614. The result is a theoretically and practically efficient method for computing lower bounds on polynomials, and is especially well-suited to sparse polynomials or polynomials of high degree. The bounds returned are always at least as strong as those computed by "SONC" as in https://arxiv.org/abs/1808.08431, and can be stronger. Tests and documentation for this sub-package of sigpy are on the way!
+For Polynomials, it uses the idea of a "signomial representative" to produce global lower bounds as described in my recent paper: https://arxiv.org/abs/1810.01614. The result is a theoretically and practically efficient method for computing lower bounds on polynomials, and is especially well-suited to sparse polynomials or polynomials of high degree. The bounds returned are always at least as strong as those computed by "SONC" as in https://arxiv.org/abs/1808.08431, and can be stronger. Additional documentation for this sub-package of sigpy is on the way!
 
 ## To install
 
@@ -13,6 +13,8 @@ For Polynomials, it uses the idea of a "signomial representative" to produce glo
 
 ## Examples
 
-A couple examples are given in the second set of slides under "Newton Polytopes and Relative Entropy Optimization" [at my website](http://rileyjmurray.com/research).
+Soon we will have a dedicated collection of examples hosted on this repository. For now, there are two places to look:
 
-Soon we will have a dedicated collection of examples hosted on this repository.
+1. Functions in ``tests/test_sage.py`` and ``tests/test_sage_poly.py``.
+2. The second set of slides under "Newton Polytopes and Relative Entropy Optimization" [at my website](http://rileyjmurray.com/research).
+
