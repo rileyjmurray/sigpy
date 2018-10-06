@@ -82,7 +82,7 @@ def make_poly_lagrangian(f, gs, p, q, add_constant_poly=True):
 
     Also return a list of pairs of Polynomial objects. If the pair (p1, p2) is in this list,
     then p1 is a generalized Lagrange multiplier (which we should constrain to be nonnegative,
-    somehow), and p2 represents a constraint p2(x) >= 0 in the Polynomial program after taking
+    somehow), and p2 represents a constraint p2(x) >= 0 in the polynomial program after taking
     products of the gs.
     """
     if not all([isinstance(g, Polynomial) for g in gs]):
