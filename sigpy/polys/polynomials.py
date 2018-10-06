@@ -8,12 +8,12 @@ __NUMERIC_TYPES__ = (int, float, np.int_, np.float_)
 
 class Polynomial(Signomial):
 
-    def __init__(self, alpha, c):
-        if not np.all(alpha % 1 == 0):
+    def __init__(self, alpha_maybe_c, c=None):
+        Signomial.__init__(self, alpha_maybe_c, c)
+        if not np.all(self.alpha % 1 == 0):
             raise RuntimeError('Exponents must belong the the integer lattice.')
-        if not np.all(alpha >= 0):
+        if not np.all(self.alpha >= 0):
             raise RuntimeError('Exponents must be nonnegative.')
-        Signomial.__init__(self, alpha, c)
         self._sig_rep = None
         self._sig_rep_constrs = []
 
