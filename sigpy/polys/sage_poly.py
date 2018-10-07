@@ -43,7 +43,7 @@ def constrained_sage_poly_primal(f, gs, p=0, q=1):
     else:
         add_constant_poly = True
     lagrangian, dualized_polynomials = make_poly_lagrangian(f, gs, p=p, q=q,
-                                                            add_constant_poly = add_constant_poly)
+                                                            add_constant_poly=add_constant_poly)
     constrs = []
     for s_h, _ in dualized_polynomials:
         s_h_sr, s_h_sr_cons = s_h.sig_rep
