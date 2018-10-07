@@ -5,8 +5,6 @@ import numpy as np
 from itertools import combinations_with_replacement
 
 
-# Unconstrained polynomial optimization is easy.
-
 def sage_poly_dual(p, level=0):
     sr, cons = p.sig_rep
     # If p.c contains no cvxpy Expressions, then
@@ -28,9 +26,6 @@ def sage_poly_feasibility(p):
     return sage_feasibility(sr, additional_cons=cons)
 
 
-# The function below is COMPLETELY UNTESTED.
-
-
 def constrained_sage_poly_primal(f, gs, p=0, q=1):
     """
     Compute the primal f_{SAGE}^{(p, q)} bound for
@@ -43,7 +38,12 @@ def constrained_sage_poly_primal(f, gs, p=0, q=1):
     :param q: a positive integer.
     :return: a CVXPY Problem that defines the primal formulation for f_{SAGE}^{(p, q)}.
     """
-    lagrangian, dualized_polynomials = make_poly_lagrangian(f, gs, p=p, q=q)
+    if q == 1:
+        add_constant_poly = False
+    else:
+        add_constant_poly = True
+    lagrangian, dualized_polynomials = make_poly_lagrangian(f, gs, p=p, q=q,
+                                                            add_constant_poly = add_constant_poly)
     constrs = []
     for s_h, _ in dualized_polynomials:
         s_h_sr, s_h_sr_cons = s_h.sig_rep
