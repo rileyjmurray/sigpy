@@ -14,6 +14,7 @@
    limitations under the License.
 """
 import unittest
+import cvxpy
 import numpy as np
 from sigpy import sage
 from sigpy.signomials import Signomial
@@ -126,7 +127,7 @@ class TestSAGERelaxations(unittest.TestCase):
         val1 = sage.sage_multiplier_search(s, level=1).solve(solver='ECOS')
         assert val1 == 0
 
-    def test_constrained_sage(self):
+    def test_constrained_sage_1(self):
         s0 = Signomial({(10.2, 0, 0): 10, (0, 9.8, 0): 10, (0, 0, 8.2): 10})
         s1 = Signomial({(1.5089, 1.0981, 1.3419): -14.6794})
         s2 = Signomial({(1.0857, 1.9069, 1.6192): -7.8601})
@@ -143,6 +144,46 @@ class TestSAGERelaxations(unittest.TestCase):
                   sage.constrained_sage_dual(f, gs, p=0, q=1).solve(solver='ECOS')]
         assert abs(actual[0] - expected) < 1e-4 and abs(actual[1] - expected) < 1e-4
 
+    def test_constrained_sage_2(self):
+        # a Signomial Programming formulation of an example from page 16 of
+        # http://homepages.laas.fr/henrion/papers/gloptipoly3.pdf
+        # --- which is itself borrowed from somewhere else.
+        f = Signomial({(1, 0, 0): -2,
+                       (0, 1, 0): 1,
+                       (0, 0, 1): -1})
+        # Constraints over more than one variable
+        g1 = Signomial({(0, 0, 0): 24,
+                        (1, 0, 0): -20,
+                        (0, 1, 0): 9,
+                        (0, 0, 1): -13,
+                        (2, 0, 0): 4,
+                        (1, 1, 0): -4,
+                        (1, 0, 1): 4,
+                        (0, 2, 0): 2,
+                        (0, 1, 1): -2,
+                        (0, 0, 2): 2})
+        g2 = Signomial({(1, 0, 0): -1,
+                        (0, 1, 0): -1,
+                        (0, 0, 1): -1,
+                        (0, 0, 0): 4})
+        g3 = Signomial({(0, 1, 0): -3,
+                        (0, 0, 1): -1,
+                        (0, 0, 0): 6})
+        # Bound constraints on x_1
+        g4 = Signomial({(1, 0, 0): -1,
+                        (0, 0, 0): 2})
+        # Bound constraints on x_3
+        g5 = Signomial({(0, 0, 1): -1,
+                        (0, 0, 0): 3})
+        # Assemble!
+        gs = [g1, g2, g3, g4, g5]
+        res01 = [sage.constrained_sage_primal(f, gs, p=0, q=1).solve(solver='ECOS', max_iters=1000),
+                 sage.constrained_sage_dual(f, gs, p=0, q=1).solve(solver='ECOS', max_iters=1000)]
+        assert abs(res01[0] - res01[1]) < 1e-5
+        if 'MOSEK' in cvxpy.installed_solvers():
+            res11 = [sage.constrained_sage_primal(f, gs, p=1, q=1).solve(solver='MOSEK'),
+                     sage.constrained_sage_dual(f, gs, p=1, q=1).solve(solver='MOSEK')]
+            assert abs(res11[0] - res11[1]) < 1e-4
 
 if __name__ == '__main__':
     unittest.main()
