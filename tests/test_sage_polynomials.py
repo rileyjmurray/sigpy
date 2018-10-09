@@ -159,7 +159,7 @@ class TestSagePolynomials(unittest.TestCase):
         assert abs(res1 - (-5.66293708)) <= 1e-6
         # ^ Slightly better than gloptipoly3, for same "level".
         prob2 = sage.constrained_sage_poly_primal(f, gs, p=1, q=2)
-        res2 = prob2.solve(solver='ECOS', verbose=False, max_iters=100000)
+        res2 = prob2.solve(solver='ECOS', verbose=False, max_iters=1000)
         assert abs(res2 - (-4.12213933)) <= 1e-6
 
 
