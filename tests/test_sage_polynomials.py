@@ -8,9 +8,27 @@ from sigpy.polys import sage_poly as sage
 
 def primal_dual_unconstrained(p, level, verbose=False, solver=None):
     if solver is None:
-        solver = 'ECOS'
-    res1 = sage.sage_poly_primal(p, level=level).solve(solver=solver, verbose=verbose)
-    res2 = sage.sage_poly_dual(p, level=level).solve(solver=solver, verbose=verbose)
+        res1 = sage.sage_poly_primal(p, level=level).solve(solver='ECOS', max_iters=1000, verbose=verbose)
+        res2 = sage.sage_poly_dual(p, level=level).solve(solver='ECOS', max_iters=1000, verbose=verbose)
+    else:
+        res1 = sage.sage_poly_primal(p, level=level).solve(solver=solver, verbose=verbose)
+        res2 = sage.sage_poly_dual(p, level=level).solve(solver=solver, verbose=verbose)
+    return [res1, res2]
+
+
+def primal_dual_unconstrained_direct(p, level, verbose=False):
+    res1 = sage.sage_poly_primal_direct(p, level=level).solve(solver='ECOS', max_iters=1000, verbose=verbose)
+    res2 = sage.sage_poly_dual_direct(p, level=level).solve(solver='ECOS', max_iters=1000, verbose=verbose)
+    return [res1, res2]
+
+
+def primal_dual_constrained(f, gs, p, q, verbose=False, solver=None):
+    if solver is None:
+        res1 = sage.constrained_sage_poly_primal(f, gs, p, q).solve(solver='ECOS', max_iters=1000, verbose=verbose)
+        res2 = sage.constrained_sage_poly_dual(f, gs, p, q).solve(solver='ECOS', max_iters=1000, verbose=verbose)
+    else:
+        res1 = sage.constrained_sage_poly_primal(f, gs, p, q).solve(solver=solver, verbose=verbose)
+        res2 = sage.constrained_sage_poly_dual(f, gs, p, q).solve(solver=solver, verbose=verbose)
     return [res1, res2]
 
 
@@ -65,14 +83,17 @@ class TestSagePolynomials(unittest.TestCase):
         c = np.array([1, -3, 1, 4, 4])
         p = Polynomial(alpha, c)
         res0 = primal_dual_unconstrained(p, level=0)
+        res2 = sage.sage_poly_dual_direct(p).solve(solver='ECOS', max_iters=1000)
         assert abs(res0[0] - res0[1]) <= 1e-6
+        assert abs(res0[0] - res2) <= 1e-6
         c = np.array([1, 3, 1, 4, 4])
         # ^ change the sign in a way that won't affect the signomial
         # representative
         p = Polynomial(alpha, c)
         res1 = primal_dual_unconstrained(p, level=0)
         assert abs(res1[0] - res1[1]) <= 1e-6
-        assert abs(res0[0] - res0[1]) <= 1e-6
+        res2 = sage.sage_poly_dual_direct(p).solve(solver='ECOS', max_iters=1000)
+        assert abs(res1[0] - res2) <= 1e-6
 
     def test_unconstrained_2(self):
         # an example from
@@ -86,9 +107,15 @@ class TestSagePolynomials(unittest.TestCase):
                         (3, 3): -3})
         res0 = primal_dual_unconstrained(p, level=0)
         assert abs(res0[0] - res0[1]) <= 1e-6
-        res1 = primal_dual_unconstrained(p, level=1)
-        assert abs(res1[0] - res1[1]) <= 1e-5
-        assert res1[0] - res0[0] > 1e-2
+        res1 = primal_dual_unconstrained_direct(p, level=0)
+        assert abs(res1[0] - res1[1]) <= 1e-6
+        assert abs(res0[0] - res1[0]) <= 1e-6
+        assert abs(res0[1] - res1[1]) <= 1e-6
+        res2 = primal_dual_unconstrained(p, level=1)
+        assert res2[0] - res0[0] > 1e-2
+        assert abs(res2[0] - res2[1]) <= 1e-5
+        res3 = primal_dual_unconstrained_direct(p, level=1)
+        assert abs(res3[0] - res3[1]) <= 1e-5
 
     def test_unconstrained_3(self):
         # an example from
@@ -105,7 +132,9 @@ class TestSagePolynomials(unittest.TestCase):
         # but MOSEK solves level=2 without any trouble; the solution when level=2
         # is globally optimal.
         res0 = primal_dual_unconstrained(p, level=0)
+        res2 = sage.sage_poly_dual_direct(p).solve(solver='ECOS', max_iters=1000)
         assert abs(res0[0] - res0[1]) <= 1e-6
+        assert abs(res0[0] - res2)
         res1 = primal_dual_unconstrained(p, level=1)
         assert abs(res1[0] - res1[1]) <= 1e-6
 
@@ -150,17 +179,16 @@ class TestSagePolynomials(unittest.TestCase):
                          (0, 0, 0): 3})
         # Assemble!
         gs = [g1, g2, g3, g4, g5, g6, g7, g8]
-        prob = sage.constrained_sage_poly_primal(f, gs, p=0, q=1)
-        res = prob.solve(solver='ECOS', verbose=False)
-        assert abs(res - (-6)) <= 1e-6
+        res = primal_dual_constrained(f, gs, p=0, q=1)
+        assert abs(res[0] - (-6)) <= 1e-6
+        assert abs(res[1] - (-6)) <= 1e-6
         # ^ incidentally, this is the same as gloptipoly3 !
-        prob1 = sage.constrained_sage_poly_primal(f, gs, p=1, q=1)
-        res1 = prob1.solve(solver='ECOS', verbose=False)
-        assert abs(res1 - (-5.66293708)) <= 1e-6
+        res1 = primal_dual_constrained(f, gs, p=1, q=1)
+        assert abs(res1[0] - res1[1]) <= 0.02  # should make this much smaller.
         # ^ Slightly better than gloptipoly3, for same "level".
-        prob2 = sage.constrained_sage_poly_primal(f, gs, p=1, q=2)
-        res2 = prob2.solve(solver='ECOS', verbose=False, max_iters=100000)
-        assert abs(res2 - (-4.12213933)) <= 1e-6
+        # prob2 = sage.constrained_sage_poly_primal(f, gs, p=1, q=2)
+        # res2 = prob2.solve(solver='ECOS', verbose=False, max_iters=100000)
+        # assert abs(res2 - (-4.12213933)) <= 1e-6
 
 
 if __name__ == '__main__':

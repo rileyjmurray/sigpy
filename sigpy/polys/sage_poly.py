@@ -1,8 +1,9 @@
 from sigpy.polys.polynomials import Polynomial
-from sigpy.sage import sage_primal, sage_dual, sage_feasibility, hierarchy_e_k, relative_c_sage
+from sigpy.sage import sage_primal, sage_dual, sage_feasibility, hierarchy_e_k, relative_c_sage, relative_c_sage_star
+from sigpy.signomials import relative_coeff_vector
 import cvxpy
 import numpy as np
-from itertools import combinations_with_replacement
+from itertools import combinations_with_replacement, combinations
 
 
 def sage_poly_dual(p, level=0):
@@ -17,6 +18,36 @@ def sage_poly_primal(p, level=0):
     # If p.c contains no cvxpy Expressions, then
     # cons should be a list of length zero.
     return sage_primal(sr, level, additional_cons=cons)
+
+
+def sage_poly_dual_direct(p, level=0):
+    t_mul = Polynomial({tuple(row): 1 for row in p.alpha if np.all(row % 2 == 0)})
+    t_mul = t_mul ** level
+    p_mod = Polynomial(p.alpha_c)
+    gamma  = cvxpy.Variable()
+    lagrangian = (p_mod - gamma) * t_mul
+    p_mod = p_mod * t_mul
+    v = cvxpy.Variable(shape=(lagrangian.m, 1))
+    constraints = relative_c_poly_sage_star(lagrangian, v)
+    a = relative_coeff_vector(t_mul, lagrangian.alpha)
+    a = a.reshape(a.size, 1)
+    constraints.append(a.T * v == 1)
+    obj_vec = relative_coeff_vector(p_mod, lagrangian.alpha)
+    obj = cvxpy.Minimize(obj_vec * v)
+    prob = cvxpy.Problem(obj, constraints)
+    return prob
+
+
+def sage_poly_primal_direct(p, level=0):
+    t_mul = Polynomial({tuple(row): 1 for row in p.alpha if np.all(row % 2 == 0)})
+    t_mul = t_mul ** level
+    gamma  = cvxpy.Variable()
+    p_mod = (Polynomial(p.alpha_c) - gamma) * t_mul
+    p_mod.remove_terms_with_zero_as_coefficient()
+    constraints = relative_c_sage_poly(p_mod)
+    obj = cvxpy.Maximize(gamma)
+    prob = cvxpy.Problem(obj, constraints)
+    return prob
 
 
 def sage_poly_feasibility(p):
@@ -38,12 +69,7 @@ def constrained_sage_poly_primal(f, gs, p=0, q=1):
     :param q: a positive integer.
     :return: a CVXPY Problem that defines the primal formulation for f_{SAGE}^{(p, q)}.
     """
-    if q == 1:
-        add_constant_poly = False
-    else:
-        add_constant_poly = True
-    lagrangian, dualized_polynomials = make_poly_lagrangian(f, gs, p=p, q=q,
-                                                            add_constant_poly=add_constant_poly)
+    lagrangian, dualized_polynomials = make_poly_lagrangian(f, gs, p=p, q=q, add_constant_poly=(q != 1))
     constrs = []
     for s_h, _ in dualized_polynomials:
         s_h_sr, s_h_sr_cons = s_h.sig_rep
@@ -59,6 +85,36 @@ def constrained_sage_poly_primal(f, gs, p=0, q=1):
     # noinspection PyUnboundLocalVariable
     obj = cvxpy.Maximize(gamma)
     prob = cvxpy.Problem(obj, constrs)
+    return prob
+
+
+def constrained_sage_poly_dual(f, gs, p=0, q=1):
+    """
+    Compute the dual f_{SAGE}^{(p, q)} bound for
+
+        inf f(x) : g(x) >= 0 for g \in gs.
+
+    :param f: a Signomial.
+    :param gs: a list of Signomials.
+    :param p: a nonnegative integer,
+    :param q: a positive integer.
+    :return: a CVXPY Problem that defines the dual formulation for f_{SAGE}^{(p, q)}.
+    """
+    lagrangian, dualized_polynomials = make_poly_lagrangian(f, gs, p=p, q=q, add_constant_poly=(q != 1))
+    v = cvxpy.Variable(shape=(lagrangian.m, 1))
+    constraints = relative_c_poly_sage_star(lagrangian, v)
+    for s_h, h in dualized_polynomials:
+        v_h = cvxpy.Variable(name='v_h_' + str(s_h), shape=(s_h.m, 1))
+        constraints += relative_c_poly_sage_star(s_h, v_h)
+        c_h = hierarchy_c_h_array(s_h, h, lagrangian)
+        constraints.append(c_h * v == v_h)
+    # Equality constraint (for the Lagrangian to be bounded).
+    a = relative_coeff_vector(Polynomial({(0,) * f.n: 1}), lagrangian.alpha)
+    a = a.reshape(a.size, 1)
+    constraints.append(a.T * v == 1)
+    obj_vec = relative_coeff_vector(f, lagrangian.alpha)
+    obj = cvxpy.Minimize(obj_vec * v)
+    prob = cvxpy.Problem(obj, constraints)
     return prob
 
 
@@ -92,7 +148,7 @@ def make_poly_lagrangian(f, gs, p, q, add_constant_poly=True):
     if not isinstance(f, Polynomial):
         f = Polynomial({(0,) * gs[0].n: f})
     gs = set(gs)  # remove duplicates
-    hs = set([np.prod(comb) for comb in combinations_with_replacement(gs, q)])
+    hs = set([np.prod(comb) for comb in combinations(gs, q)])
     gamma = cvxpy.Variable(name='gamma')
     lagrangian = f - gamma
     alpha_E_p = hierarchy_e_k([f] + list(gs), k=p)
@@ -103,3 +159,65 @@ def make_poly_lagrangian(f, gs, p, q, add_constant_poly=True):
         lagrangian -= temp_sh * h
         dualized_polynomials.append((temp_sh, h))
     return lagrangian, dualized_polynomials
+
+
+def relative_c_poly_sage_star(p, y):
+    """
+
+    :param p:
+    :param y:
+    :return:
+    """
+    sr, sr_cons = p.sig_rep
+    constrs = []
+    evens = [i for i, row in enumerate(sr.alpha) if np.all(row % 2 == 0)]
+    if len(evens) < sr.m:
+        is_even = np.zeros(shape=(sr.m,), dtype=bool)
+        is_even[evens] = True
+        lambda_1_expr = []
+        lambda_2_expr = []
+        mu_expr = []
+        for i in range(sr.m):
+            if i in evens:
+                lambda_1_expr.append(0)
+                lambda_2_expr.append(0)
+                mu_expr.append(cvxpy.Variable(shape=()))
+            else:
+                lambda_1_expr.append(cvxpy.Variable(shape=(), nonneg=True))
+                lambda_2_expr.append(cvxpy.Variable(shape=(), nonneg=True))
+                mu_expr.append(0)
+        lambda_1_expr = cvxpy.vstack(lambda_1_expr)
+        lambda_2_expr = cvxpy.vstack(lambda_2_expr)
+        mu_expr = cvxpy.vstack(mu_expr)
+        v = cvxpy.Variable(shape=(sr.m, 1))
+        constrs = [v == lambda_1_expr + lambda_2_expr + mu_expr,
+                   y == lambda_2_expr - lambda_1_expr + mu_expr]
+        constrs += relative_c_sage_star(sr, v)
+    else:
+        constrs += relative_c_sage_star(sr, y)
+    return constrs
+
+
+def relative_c_sage_poly(p):
+    sr, sr_cons = p.sig_rep
+    sr_cons += relative_c_sage(sr)
+    return sr_cons
+
+
+def hierarchy_c_h_array(s_h, h, lagrangian):
+    """
+    Assume (s_h * h).alpha is a subset of lagrangian.alpha.
+
+    :param s_h: a SAGE multiplier Signomial for the constrained hierarchy
+    :param h: the constraint Signomial
+    :param lagrangian: the Signomial f - \gamma - \sum_{h \in H} s_h * h.
+
+    :return: a matrix c_h so that if "v" is a dual variable to the constraint
+    "lagrangian is SAGE", then the constraint "s_h is SAGE" is dualizes to
+    "c_h * v \in C_{SAGE}^{\star}(s_h)".
+    """
+    c_h = np.zeros((s_h.alpha.shape[0], lagrangian.alpha.shape[0]))
+    for i, row in enumerate(s_h.alpha):
+        temp_sig = Polynomial({tuple(row): 1}) * h
+        c_h[i, :] = relative_coeff_vector(temp_sig, lagrangian.alpha)
+    return c_h

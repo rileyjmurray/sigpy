@@ -104,7 +104,7 @@ def relative_c_sage_star(s, v):
     N_I = [i for i, c_i in enumerate(c) if (i in non_constants) or c_i < 0]
     Nc_I = [i for i, c_i in enumerate(c) if (i in non_constants) or c_i > 0]
     # variable definitions
-    mu = cvxpy.Variable(shape=(len(N_I), s.n), name=('mu_' + str(v.id)))
+    mu = cvxpy.Variable(shape=(len(N_I), s.n))
     # constraints
     constraints = []
     for i, ii in enumerate(N_I):

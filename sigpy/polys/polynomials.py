@@ -1,5 +1,6 @@
 from collections import defaultdict
 from sigpy.signomials import Signomial
+from sigpy.signomials import row_correspondence
 import numpy as np
 import cvxpy
 
@@ -63,7 +64,7 @@ class Polynomial(Signomial):
         return (-1) * self
 
     def __pow__(self, power, modulo=None):
-        if self.c.type not in __NUMERIC_TYPES__:
+        if self.c.dtype not in __NUMERIC_TYPES__:
             raise RuntimeError('Cannot exponentiate polynomials with symbolic coefficients.')
         temp = Signomial.__pow__(self, power)
         temp = Polynomial(temp.alpha, temp.c)
@@ -94,6 +95,9 @@ class Polynomial(Signomial):
             else:
                 d[tuple(row)] = self.c[i]
         self._sig_rep = Signomial(d)
+        row_cor = row_correspondence(self._sig_rep.alpha, self.alpha)
+        self._sig_rep.alpha =  self._sig_rep.alpha[row_cor, :]
+        self._sig_rep.c = self._sig_rep.c[row_cor]
         pass
 
     @staticmethod
