@@ -14,6 +14,16 @@ def primal_dual_unconstrained(p, level, verbose=False, solver=None):
     return [res1, res2]
 
 
+def primal_dual_constrained(f, gs, p, q, verbose=False, solver=None):
+    if solver is None:
+        res1 = sage.constrained_sage_poly_primal(f, gs, p, q).solve(solver='ECOS', max_iters=1000, verbose=verbose)
+        res2 = sage.constrained_sage_poly_dual(f, gs, p, q).solve(solver='ECOS', max_iters=1000, verbose=verbose)
+    else:
+        res1 = sage.constrained_sage_poly_primal(f, gs, p, q).solve(solver=solver, verbose=verbose)
+        res2 = sage.constrained_sage_poly_dual(f, gs, p, q).solve(solver=solver, verbose=verbose)
+    return [res1, res2]
+
+
 class TestSagePolynomials(unittest.TestCase):
 
     #
@@ -150,17 +160,13 @@ class TestSagePolynomials(unittest.TestCase):
                          (0, 0, 0): 3})
         # Assemble!
         gs = [g1, g2, g3, g4, g5, g6, g7, g8]
-        prob = sage.constrained_sage_poly_primal(f, gs, p=0, q=1)
-        res = prob.solve(solver='ECOS', verbose=False)
-        assert abs(res - (-6)) <= 1e-6
+        res = primal_dual_constrained(f, gs, 0, 1)
+        assert abs(res[0] - (-6)) <= 1e-6
+        assert abs(res[1] - (-6)) <= 1e-6
         # ^ incidentally, this is the same as gloptipoly3 !
-        prob1 = sage.constrained_sage_poly_primal(f, gs, p=1, q=1)
-        res1 = prob1.solve(solver='ECOS', verbose=False)
-        assert abs(res1 - (-5.66293708)) <= 1e-6
-        # ^ Slightly better than gloptipoly3, for same "level".
-        prob2 = sage.constrained_sage_poly_primal(f, gs, p=1, q=2)
-        res2 = prob2.solve(solver='ECOS', verbose=False, max_iters=1000)
-        assert abs(res2 - (-4.12213933)) <= 1e-6
+        res1 = primal_dual_constrained(f, gs, 1, 1)
+        assert abs(res1[0] - (-5.7)) <= 0.02
+        assert abs(res1[0] - (-5.7)) <= 0.02
 
 
 if __name__ == '__main__':

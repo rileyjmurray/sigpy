@@ -64,10 +64,6 @@ class TestPolynomials(unittest.TestCase):
         assert s.alpha_c == {(0,): 0}
 
     #
-    # Test construction of Signomial representatives (in the constant case).
-    #
-
-    #
     #   Test construction of [constant] signomial representatives
     #
 
