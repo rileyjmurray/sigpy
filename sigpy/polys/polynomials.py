@@ -65,7 +65,8 @@ class Polynomial(Signomial):
     def __pow__(self, power, modulo=None):
         if self.c.dtype not in __NUMERIC_TYPES__:
             raise RuntimeError('Cannot exponentiate polynomials with symbolic coefficients.')
-        temp = Signomial.__pow__(self, power)
+        temp = Signomial(self.alpha, self.c)
+        temp = temp ** power
         temp = Polynomial(temp.alpha, temp.c)
         return temp
 
