@@ -5,6 +5,12 @@ from sigpy.signomials import Signomial
 
 class TestSignomials(unittest.TestCase):
 
+    @staticmethod
+    def are_equal(sig1, sig2):
+        diff = sig1 - sig2
+        diff.remove_terms_with_zero_as_coefficient()
+        return diff.m == 1 and diff.c[0] == 0
+
     def test_construction(self):
         # data for tests
         alpha = np.array([[0], [1], [2]])
@@ -68,6 +74,23 @@ class TestSignomials(unittest.TestCase):
         s = s0 * q0
         s.remove_terms_with_zero_as_coefficient()
         assert s.alpha_c == {(0,): 0}
+
+    def test_exponentiation(self):
+        # raise to a negative power
+        s = Signomial({(0.25,): -1})
+        t_actual = s ** -3
+        t_expect = Signomial({(-0.75,): -1})
+        assert TestSignomials.are_equal(t_actual, t_expect)
+        # raise to a fractional power
+        s = Signomial({(2,): 9})
+        t_actual = s ** 0.5
+        t_expect = Signomial({(1,): 3})
+        assert TestSignomials.are_equal(t_actual, t_expect)
+        # raise to a nonnegative integer power
+        s = Signomial({(0,): 1, (1,): 2})
+        t_actual = s ** 2
+        t_expect = Signomial({(0,): 1, (1,): 4, (2,): 4})
+        assert TestSignomials.are_equal(t_actual, t_expect)
 
     def test_signomial_evaluation(self):
         s = Signomial({(1,): 1})

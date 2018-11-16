@@ -181,19 +181,30 @@ class Signomial(object):
         return other + (-1) * self
 
     def __pow__(self, power, modulo=None):
-        if not isinstance(power, int) or power < 0:
-            raise ValueError('Signomials may only be raised to nonnegative powers.')
-        s = Signomial(self.alpha_c)
-        for t in range(power-1):
-            s = s * self
-            s._update_alpha_c_arrays()
-        if power == 0:
-            # noinspection PyTypeChecker
-            return Signomial({(0,) * s.n: 1})
-        elif power == 1:
-            return s
+        if self.c.dtype not in __NUMERIC_TYPES__:
+            raise RuntimeError('Cannot exponentiate signomials with symbolic coefficients.')
+        if isinstance(power, int) and power >= 0:
+            s = Signomial(self.alpha_c)
+            for t in range(power-1):
+                s = s * self
+            if power == 0:
+                # noinspection PyTypeChecker
+                return Signomial({(0,) * s.n: 1})
+            elif power == 1:
+                return s
+            else:
+                return Signomial(s.alpha_c)
         else:
-            return Signomial(s.alpha_c)
+            d = dict((k, v) for (k, v) in self.alpha_c.items() if v != 0)
+            if len(d) != 1:
+                raise ValueError('Only signomials with exactly one term can be raised to power %s.')
+            v = list(d.values())[0]
+            if v < 0 and not isinstance(power, int):
+                raise ValueError('Cannot compute non-integer power %s of coefficient %s', power, v)
+            alpha_tup = tuple(power * ai for ai in list(d.keys())[0])
+            c = v ** power
+            s = Signomial(alpha_maybe_c={alpha_tup: c})
+            return s
 
     def __neg__(self):
         # noinspection PyTypeChecker
