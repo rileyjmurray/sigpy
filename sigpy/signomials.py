@@ -218,7 +218,7 @@ class Signomial(object):
             if v < 0 and not isinstance(power, int):
                 raise ValueError('Cannot compute non-integer power %s of coefficient %s', power, v)
             alpha_tup = tuple(power * ai for ai in list(d.keys())[0])
-            c = v ** power
+            c = float(v) ** power
             s = Signomial(alpha_maybe_c={alpha_tup: c})
             return s
 
