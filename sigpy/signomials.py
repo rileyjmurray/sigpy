@@ -51,6 +51,22 @@ def row_correspondence(alpha1, alpha2):
     return alpha1_to_alpha2
 
 
+def standard_monomials(n):
+    """
+    Returns a numpy array "x" of length n, with "x[i]" as a signomial with
+    one term corresponding to the (i+1)-th standard basis vector in R^n.
+
+    This is useful for constructing signomials with syntax such as
+        f = (x[0] ** 1.5) * (x[2] ** -0.6) - x[1] * x[2]
+    """
+    x = np.empty(shape=(n,), dtype=object)
+    for i in range(n):
+        ei = np.zeros(shape=(1, n))
+        ei[0, i] = 1
+        x[i] = Signomial(ei, np.array([1]))
+    return x
+
+
 class Signomial(object):
 
     def __init__(self, alpha_maybe_c, c=None):

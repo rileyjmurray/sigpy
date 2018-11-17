@@ -1,6 +1,7 @@
 import numpy as np
 import unittest
 from sigpy.signomials import Signomial
+from sigpy.signomials import standard_monomials
 
 
 class TestSignomials(unittest.TestCase):
@@ -25,6 +26,16 @@ class TestSignomials(unittest.TestCase):
         for i in range(s.m):
             recovered_alpha_c[tuple(s.alpha[i, :])] = s.c[i]
         assert s.n == 1 and s.m == 3 and alpha_c == recovered_alpha_c
+
+    def test_standard_monomials(self):
+        x = standard_monomials(2)
+        y_actual = x[0] + 3 * x[1] ** 2
+        y_expect = Signomial({(1,0): 1, (0,2): 3})
+        assert TestSignomials.are_equal(y_actual, y_expect)
+        x = standard_monomials(4)
+        y_actual = np.sum(x)
+        y_expect = Signomial(np.eye(4), np.ones(shape=(4,)))
+        assert TestSignomials.are_equal(y_actual, y_expect)
 
     # noinspection PyUnresolvedReferences
     def test_scalar_multiplication(self):
