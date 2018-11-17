@@ -6,6 +6,25 @@ import cvxpy
 __NUMERIC_TYPES__ = (int, float, np.int_, np.float_)
 
 
+def standard_monomials(n):
+    """
+    Returns a numpy array "x" of length n, with "x[i]" as a Polynomial with
+    one term corresponding to the (i+1)-th standard basis vector in R^n.
+
+    This is useful for constructing polynomials with syntax such as ...
+
+        x = standard_monomials(3)
+
+        f = (x[0] ** 2) * x[2] - 4 * x[1] * x[2] * x[0]
+    """
+    x = np.empty(shape=(n,), dtype=object)
+    for i in range(n):
+        ei = np.zeros(shape=(1, n))
+        ei[0, i] = 1
+        x[i] = Polynomial(ei, np.array([1]))
+    return x
+
+
 class Polynomial(Signomial):
 
     def __init__(self, alpha_maybe_c, c=None):

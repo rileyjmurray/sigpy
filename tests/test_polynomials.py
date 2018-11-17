@@ -1,9 +1,15 @@
 import numpy as np
 import unittest
-from sigpy.polys.polynomials import Polynomial
+from sigpy.polys.polynomials import Polynomial, standard_monomials
 
 
 class TestPolynomials(unittest.TestCase):
+
+    @staticmethod
+    def are_equal(poly1, poly2):
+        diff = poly1 - poly2
+        diff.remove_terms_with_zero_as_coefficient()
+        return diff.m == 1 and diff.c[0] == 0
 
     #
     #    Test arithmetic and operator overloading.
@@ -74,6 +80,16 @@ class TestPolynomials(unittest.TestCase):
         res = p ** 3 - Polynomial({(0,): 125, (1,): 150, (2,): 60, (3,): 8})
         res.remove_terms_with_zero_as_coefficient()
         assert res.m == 1 and set(res.c) == {0}
+
+    def test_standard_monomials(self):
+        x = standard_monomials(3)
+        y_actual = np.prod(x)
+        y_expect = Polynomial({(1,1,1): 1})
+        assert TestPolynomials.are_equal(y_actual, y_expect)
+        x = standard_monomials(2)
+        y_actual = np.sum(x) ** 2
+        y_expect = Polynomial({(2,0): 1, (1,1): 2, (0,2):1})
+        assert TestPolynomials.are_equal(y_actual, y_expect)
 
     #
     #   Test construction of [constant] signomial representatives
