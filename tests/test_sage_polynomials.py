@@ -2,7 +2,7 @@ import unittest
 import cvxpy
 from cvxpy.expressions.expression import Expression
 import numpy as np
-from sigpy.polys.polynomials import Polynomial
+from sigpy.polys.polynomials import Polynomial, standard_monomials
 from sigpy.polys import sage_poly as sage
 
 
@@ -67,7 +67,7 @@ class TestSagePolynomials(unittest.TestCase):
         assert sr.alpha_c[(1, 1)] == -1
 
     #
-    # Test unconstrained relaxations
+    #   Test unconstrained relaxations
     #
 
     def test_unconstrained_1(self):
@@ -120,7 +120,7 @@ class TestSagePolynomials(unittest.TestCase):
         assert abs(res1[0] - res1[1]) <= 1e-6
 
     #
-    # Test constrained relaxations
+    #   Test constrained relaxations
     #
 
     def test_constrained_1(self):
@@ -168,6 +168,29 @@ class TestSagePolynomials(unittest.TestCase):
         assert abs(res1[0] - (-5.7)) <= 0.02
         assert abs(res1[0] - (-5.7)) <= 0.02
 
+    #
+    #   Test multiplier search
+    #
+
+    def test_multiplier_search(self):
+        x = standard_monomials(3)
+        """
+        The polynomial
+            p = (np.sum(x)) ** 2 + a * (x[0] ** 2 + x[1] ** 2 + x[2] ** 2)
+        is PSD for a >= 0, and positive definite for a > 0.
+
+        When using the MOSEK solver, we can certify nonnegativity with SAGE polynomials for
+        a >= 0.28 when "level == 1", and a >= 0.15 when "level == 2".
+
+        When using ECOS, we run into numerical issues for the smallest choices of "a". So
+        instead we test with a == 0.5 and a == 0.25.
+        """
+        p = (np.sum(x)) ** 2 + 0.5 * (x[0] ** 2 + x[1] ** 2 + x[2] ** 2)
+        res1 = sage.sage_poly_multiplier_search(p, level=1).solve(solver='ECOS', max_iters=10000)
+        assert abs(res1) < 1e-8
+        p -= 0.25 * (x[0] ** 2 + x[1] ** 2 + x[2] ** 2)
+        res2 = sage.sage_poly_multiplier_search(p, level=2).solve(solver='ECOS', max_iters=10000)
+        assert abs(res2) < 1e-8
 
 if __name__ == '__main__':
     unittest.main()

@@ -27,6 +27,42 @@ def sage_poly_feasibility(p):
     return sage_feasibility(sr, additional_cons=cons)
 
 
+def sage_poly_multiplier_search(p, level=1):
+    """
+    Suppose we have a nonnegative polynomial p that is not SAGE. Do we have an alternative
+    to proving that p is nonnegative other than moving up the usual SAGE hierarchy?
+    Indeed we do. We can define a multiplier
+
+        mult = Polynomial(alpha_hat, c_tilde)
+
+    where the rows of alpha_hat are all "level"-wise sums of rows from s.alpha, and c_tilde is a CVXPY Variable
+    defining a nonzero SAGE polynomial. Then we can check if p_mod := p * mult is SAGE for any choice of c_tilde.
+
+    :param p: a Polynomial object
+    :param level: a nonnegative integer
+    :return: a CVXPY Problem that is feasible iff s * mult is SAGE for some SAGE multiplier Polynomial "mult".
+    """
+    p.remove_terms_with_zero_as_coefficient()
+    constraints = []
+    # Make the multipler polynomial (and require that it be SAGE)
+    mult_alpha = hierarchy_e_k([p], k=level)
+    c_tilde = cvxpy.Variable(mult_alpha.shape[0], name='c_tilde')
+    mult = Polynomial(mult_alpha, c_tilde)
+    mult_sr, mult_cons = mult.sig_rep
+    constraints += mult_cons
+    constraints += relative_c_sage(mult_sr)
+    constraints.append(cvxpy.sum(c_tilde) >= 1)
+    # Make "p_mod := p * mult", and require that it be SAGE.
+    poly_under_test = mult * p
+    poly_sr, poly_cons = poly_under_test.sig_rep
+    constraints += poly_cons
+    constraints += relative_c_sage(poly_sr)
+    # noinspection PyTypeChecker
+    obj = cvxpy.Maximize(0)
+    prob = cvxpy.Problem(obj, constraints)
+    return prob
+
+
 def constrained_sage_poly_primal(f, gs, p=0, q=1):
     """
     Compute the primal f_{SAGE}^{(p, q)} bound for
